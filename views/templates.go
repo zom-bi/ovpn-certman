@@ -21,8 +21,9 @@ func LoadTemplates() {
 		"404": newTemplate("layouts/application.gohtml", "errors/404.gohtml"),
 		"500": newTemplate("layouts/application.gohtml", "errors/500.gohtml"),
 
-		"debug": newTemplate("layouts/application.gohtml", "shared/header.gohtml", "shared/footer.gohtml", "views/debug.gohtml"),
-		"login": newTemplate("layouts/application.gohtml", "shared/header.gohtml", "shared/footer.gohtml", "views/login.gohtml"),
+		"debug":     newTemplate("layouts/application.gohtml", "shared/header.gohtml", "shared/footer.gohtml", "views/debug.gohtml"),
+		"login":     newTemplate("layouts/application.gohtml", "shared/header.gohtml", "shared/footer.gohtml", "views/login.gohtml"),
+		"cert_list": newTemplate("layouts/application.gohtml", "shared/header.gohtml", "shared/footer.gohtml", "views/cert_list.gohtml"),
 	}
 	return
 }
