@@ -1,0 +1,24 @@
+{{ define "meta" }}
+    <title>Log in</title>
+    <meta name="description" content="Test boilerplate" />
+{{ end}}
+
+{{ define "content" }}
+    <section class="content">
+        <div class="section">
+            <div class="container">
+                <div class="columns">
+                    <div class="column">
+                        <h1>Hello, World!</h1>
+                        <form action="" method="POST">
+                            <input name="username" type="text" value=""/>
+                            <input name="password" type="text" value=""/>
+                            {{ .csrfField }}
+                            <input class="button is-primary" type="submit" value="Log in">
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+{{ end}}
