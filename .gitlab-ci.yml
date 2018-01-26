@@ -46,14 +46,14 @@ compile:
       # build binaries -- list of supported plattforms is here:
       # https://stackoverflow.com/a/20728862
       - GOOS=linux   GOARCH=amd64         go build -o $CI_PROJECT_DIR/certman
-      - GOOS=linux   GOARCH=arm   GOARM=6 go build -o $CI_PROJECT_DIR/certman.arm
-      - GOOS=windows GOARCH=amd64         go build -o $CI_PROJECT_DIR/certman.exe
+      #- GOOS=linux   GOARCH=arm   GOARM=6 go build -o $CI_PROJECT_DIR/certman.arm
+      #- GOOS=windows GOARCH=amd64         go build -o $CI_PROJECT_DIR/certman.exe
     artifacts:
       expire_in: "8 hrs"
       paths:
         - certman
-        - certman.arm
-        - certman.exe
+        # - certman.arm
+        # - certman.exe
 
 minify:
     stage: release
@@ -69,7 +69,7 @@ minify:
     artifacts:
       paths:
         - certman
-        - certman.arm
-        - certman.exe
+        #- certman.arm
+        #- certman.exe
     only:
       - tags
