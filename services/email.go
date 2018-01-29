@@ -18,6 +18,7 @@ type EmailConfig struct {
 	SMTPPort     int
 	SMTPUsername string
 	SMTPPassword string
+	SMTPTimeout  time.Duration
 }
 
 type Email struct {
@@ -33,7 +34,7 @@ func NewEmail(conf *EmailConfig) *Email {
 
 	return &Email{
 		config:   conf,
-		mailChan: make(chan *mail.Message, 0),
+		mailChan: make(chan *mail.Message, 4),
 	}
 }
 
@@ -64,6 +65,8 @@ func (email *Email) Daemon() {
 		return
 	}
 
+	log.Print("Running mail sending routine")
+
 	d := mail.NewDialer(
 		email.config.SMTPServer,
 		email.config.SMTPPort,
@@ -78,6 +81,7 @@ func (email *Email) Daemon() {
 		case m, ok := <-email.mailChan:
 			if !ok {
 				// channel is closed
+				log.Print("Channel closed")
 				return
 			}
 			if !open {
@@ -87,14 +91,15 @@ func (email *Email) Daemon() {
 				}
 				open = true
 			}
+			log.Printf("Trying to send mail")
 			if err := mail.Send(s, m); err != nil {
-				log.Print(err)
+				log.Printf("Mail: %s", err)
 			}
-		// Close the connection if no email was sent in the last 30 seconds.
-		case <-time.After(30 * time.Second):
+		// Close the connection if no email was sent in the last X seconds.
+		case <-time.After(email.config.SMTPTimeout):
 			if open {
 				if err := s.Close(); err != nil {
-					panic(err)
+					log.Printf("Mail: Failed to close connection: %s", err)
 				}
 				open = false
 			}

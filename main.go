@@ -33,7 +33,8 @@ func main() {
 			SMTPServer:   "example.com",
 			SMTPPort:     25,
 			SMTPUsername: "test",
-			SMTPPassword: "test",
+			SMTPPassword: "password",
+			SMTPTimeout:  5 * time.Second,
 			From:         "Mailtest <test@example.com>",
 		},
 	}
@@ -43,12 +44,6 @@ func main() {
 	// Start the mail daemon, which re-uses connections to send mails to the
 	// SMTP server
 	go serviceProvider.Email.Daemon()
-
-	//user := models.User{}
-	//user.Username = "test"
-	//user.SetPassword("test")
-	//fmt.Println(user.HashedPassword)
-	//fmt.Println(db.Create(&user).Error)
 
 	// load and parse template files
 	views.LoadTemplates()
