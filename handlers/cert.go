@@ -19,69 +19,75 @@ import (
 	"git.klink.asia/paul/certman/views"
 )
 
-func ListCertHandler(w http.ResponseWriter, req *http.Request) {
-	v := views.New(req)
-	v.Render(w, "cert_list")
+func ListCertHandler(p *services.Provider) http.HandlerFunc {
+	return func(w http.ResponseWriter, req *http.Request) {
+		v := views.NewWithSession(req, p.Sessions)
+		v.Render(w, "cert_list")
+	}
 }
 
-func CreateCertHandler(w http.ResponseWriter, req *http.Request) {
-	email := services.SessionStore.GetUserEmail(req)
-	certname := req.FormValue("certname")
+func CreateCertHandler(p *services.Provider) http.HandlerFunc {
+	return func(w http.ResponseWriter, req *http.Request) {
+		email := p.Sessions.GetUserEmail(req)
+		certname := req.FormValue("certname")
 
-	user := models.User{}
-	err := services.Database.Where(&models.User{Email: email}).Find(&user).Error
-	if err != nil {
-		fmt.Printf("Could not fetch user for mail %s\n", email)
+		user := models.User{}
+		err := p.DB.Where(&models.User{Email: email}).Find(&user).Error
+		if err != nil {
+			fmt.Printf("Could not fetch user for mail %s\n", email)
+		}
+
+		// Load CA master certificate
+		caCert, caKey, err := loadX509KeyPair("ca.crt", "ca.key")
+		if err != nil {
+			log.Fatalf("error loading ca keyfiles: %s", err)
+			panic(err.Error())
+		}
+
+		// Generate Keypair
+		key, err := rsa.GenerateKey(rand.Reader, 2048)
+		if err != nil {
+			log.Fatalf("Could not generate keypair: %s", err)
+		}
+
+		// Generate Certificate
+		derBytes, err := CreateCertificate(key, caCert, caKey)
+
+		// Initialize new client config
+		client := models.Client{
+			Name:       certname,
+			PrivateKey: x509.MarshalPKCS1PrivateKey(key),
+			Cert:       derBytes,
+			UserID:     user.ID,
+		}
+
+		// Insert client into database
+		if err := p.DB.Create(&client).Error; err != nil {
+			panic(err.Error())
+		}
+
+		p.Sessions.Flash(w, req,
+			services.Flash{
+				Type:    "success",
+				Message: "The certificate was created successfully.",
+			},
+		)
+
+		http.Redirect(w, req, "/certs", http.StatusFound)
 	}
-
-	// Load CA master certificate
-	caCert, caKey, err := loadX509KeyPair("ca.crt", "ca.key")
-	if err != nil {
-		log.Fatalf("error loading ca keyfiles: %s", err)
-		panic(err.Error())
-	}
-
-	// Generate Keypair
-	key, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		log.Fatalf("Could not generate keypair: %s", err)
-	}
-
-	// Generate Certificate
-	derBytes, err := CreateCertificate(key, caCert, caKey)
-
-	// Initialize new client config
-	client := models.Client{
-		Name:       certname,
-		PrivateKey: x509.MarshalPKCS1PrivateKey(key),
-		Cert:       derBytes,
-		UserID:     user.ID,
-	}
-
-	// Insert client into database
-	if err := services.Database.Create(&client).Error; err != nil {
-		panic(err.Error())
-	}
-
-	services.SessionStore.Flash(w, req,
-		services.Flash{
-			Type:    "success",
-			Message: "The certificate was created successfully.",
-		},
-	)
-
-	http.Redirect(w, req, "/certs", http.StatusFound)
 }
 
-func DownloadCertHandler(w http.ResponseWriter, req *http.Request) {
-	//v := views.New(req)
-	//
-	//derBytes, err := CreateCertificate(key, caCert, caKey)
-	//pem.Encode(w, &pem.Block{Type: "CERTIFICATE", Bytes: derBytes})
-	//
-	//pkBytes := x509.MarshalPKCS1PrivateKey(key)
-	//pem.Encode(w, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: pkBytes})
-	return
+func DownloadCertHandler(p *services.Provider) http.HandlerFunc {
+	return func(w http.ResponseWriter, req *http.Request) {
+		//v := views.New(req)
+		//
+		//derBytes, err := CreateCertificate(key, caCert, caKey)
+		//pem.Encode(w, &pem.Block{Type: "CERTIFICATE", Bytes: derBytes})
+		//
+		//pkBytes := x509.MarshalPKCS1PrivateKey(key)
+		//pem.Encode(w, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: pkBytes})
+		return
+	}
 }
 
 func loadX509KeyPair(certFile, keyFile string) (*x509.Certificate, *rsa.PrivateKey, error) {

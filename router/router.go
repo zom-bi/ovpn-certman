@@ -13,7 +13,6 @@ import (
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/gorilla/csrf"
-	"github.com/jinzhu/gorm"
 
 	mw "git.klink.asia/paul/certman/middleware"
 )
@@ -26,15 +25,15 @@ var (
 	cookieKey      = []byte("osx70sMD8HZG2ouUl8uKI4wcMugiJ2WH")
 )
 
-func HandleRoutes(db *gorm.DB) http.Handler {
+func HandleRoutes(provider *services.Provider) http.Handler {
 	mux := chi.NewMux()
 
 	//mux.Use(middleware.RequestID)
-	mux.Use(middleware.Logger)          // log requests
-	mux.Use(middleware.RealIP)          // use proxy headers
-	mux.Use(middleware.RedirectSlashes) // redirect trailing slashes
-	mux.Use(mw.Recoverer)               // recover on panic
-	mux.Use(services.SessionStore.Use)  // use session storage
+	mux.Use(middleware.Logger)             // log requests
+	mux.Use(middleware.RealIP)             // use proxy headers
+	mux.Use(middleware.RedirectSlashes)    // redirect trailing slashes
+	mux.Use(mw.Recoverer)                  // recover on panic
+	mux.Use(provider.Sessions.Manager.Use) // use session storage
 
 	// we are serving the static files directly from the assets package
 	// this either means we use the embedded files, or live-load
@@ -56,26 +55,26 @@ func HandleRoutes(db *gorm.DB) http.Handler {
 
 		r.Route("/register", func(r chi.Router) {
 			r.Get("/", v("register"))
-			r.Post("/", handlers.RegisterHandler)
+			r.Post("/", handlers.RegisterHandler(provider))
 		})
 
 		r.Route("/login", func(r chi.Router) {
 			r.Get("/", v("login"))
-			r.Post("/", handlers.LoginHandler)
+			r.Post("/", handlers.LoginHandler(provider))
 		})
 
 		//r.Post("/confirm-email/{token}", handlers.ConfirmEmailHandler(db))
 
 		r.Route("/forgot-password", func(r chi.Router) {
 			r.Get("/", v("forgot-password"))
-			r.Post("/", handlers.LoginHandler)
+			r.Post("/", handlers.LoginHandler(provider))
 		})
 
 		r.Route("/certs", func(r chi.Router) {
-			r.Use(mw.RequireLogin)
-			r.Get("/", handlers.ListCertHandler)
-			r.Post("/new", handlers.CreateCertHandler)
-			r.HandleFunc("/download/{ID}", handlers.DownloadCertHandler)
+			r.Use(mw.RequireLogin(provider.Sessions))
+			r.Get("/", handlers.ListCertHandler(provider))
+			r.Post("/new", handlers.CreateCertHandler(provider))
+			r.HandleFunc("/download/{ID}", handlers.DownloadCertHandler(provider))
 		})
 
 		r.HandleFunc("/500", func(w http.ResponseWriter, req *http.Request) {

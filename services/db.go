@@ -5,7 +5,6 @@ import (
 	"log"
 
 	"git.klink.asia/paul/certman/models"
-	"git.klink.asia/paul/certman/settings"
 	"github.com/jinzhu/gorm"
 )
 
@@ -14,28 +13,34 @@ var (
 	ErrNotImplemented = errors.New("Not implemented")
 )
 
-var Database *gorm.DB
+type DBConfig struct {
+	Type string
+	DSN  string
+	Log  bool
+}
 
 // DB is a wrapper around gorm.DB to provide custom methods
 type DB struct {
 	*gorm.DB
+
+	conf *DBConfig
 }
 
-func InitDB() *gorm.DB {
-	dsn := settings.Get("DATABASE_URL", "db.sqlite3")
-
+func NewDB(conf *DBConfig) *DB {
 	// Establish connection
-	db, err := gorm.Open("sqlite3", dsn)
+	db, err := gorm.Open(conf.Type, conf.DSN)
 	if err != nil {
 		log.Fatalf("Could not open database: %s", err.Error())
 	}
 
 	// Migrate models
 	db.AutoMigrate(models.User{}, models.Client{})
-	db.LogMode(true)
+	db.LogMode(conf.Log)
 
-	Database = db
-	return db
+	return &DB{
+		DB:   db,
+		conf: conf,
+	}
 }
 
 // CountUsers returns the number of Users in the datastore

@@ -8,16 +8,10 @@ import (
 	"net/http"
 	"time"
 
-	"git.klink.asia/paul/certman/settings"
 	"github.com/alexedwards/scs"
-	"github.com/gorilla/securecookie"
 )
 
 var (
-	// SessionName is the name of the session cookie
-	SessionName = "session"
-	// CookieKey is the key the cookies are encrypted and signed with
-	CookieKey = string(securecookie.GenerateRandomKey(32))
 	// FlashesKey is the key used for the flashes in the cookie
 	FlashesKey = "_flashes"
 	// UserEmailKey is the key used to reference usernames
@@ -29,30 +23,33 @@ func init() {
 	gob.Register(Flash{})
 }
 
-// SessionStore is a globally accessible sessions store for the application
-var SessionStore *Store
+type SessionsConfig struct {
+	SessionName string
+	CookieKey   string
+	HttpOnly    bool
+	Secure      bool
+	Lifetime    time.Duration
+}
 
-// Store is a wrapped scs.Store in order to implement custom
-// logic
-type Store struct {
+// Sessions is a wrapped scs.Store in order to implement custom logic
+type Sessions struct {
 	*scs.Manager
 }
 
-// InitSession populates the default sessions Store
-func InitSession() {
+// NewSessions populates the default sessions Store
+func NewSessions(conf *SessionsConfig) *Sessions {
 	store := scs.NewCookieManager(
-		CookieKey,
+		conf.CookieKey,
 	)
+	store.Name(conf.SessionName)
 	store.HttpOnly(true)
-	store.Lifetime(24 * time.Hour)
+	store.Lifetime(conf.Lifetime)
+	store.Secure(conf.Secure)
 
-	// Use secure cookies (HTTPS only) in production
-	store.Secure(settings.Get("ENVIRONMENT", "") == "production")
-
-	SessionStore = &Store{store}
+	return &Sessions{store}
 }
 
-func (store *Store) GetUserEmail(req *http.Request) string {
+func (store *Sessions) GetUserEmail(req *http.Request) string {
 	if store == nil {
 		// if store was not initialized, all requests fail
 		log.Println("Zero pointer when checking session for username")
@@ -72,7 +69,7 @@ func (store *Store) GetUserEmail(req *http.Request) string {
 	return email
 }
 
-func (store *Store) SetUserEmail(w http.ResponseWriter, req *http.Request, email string) {
+func (store *Sessions) SetUserEmail(w http.ResponseWriter, req *http.Request, email string) {
 	if store == nil {
 		// if store was not initialized, do nothing
 		return
@@ -103,7 +100,7 @@ func (flash Flash) Render() template.HTML {
 }
 
 // Flash add flash message to session data
-func (store *Store) Flash(w http.ResponseWriter, req *http.Request, flash Flash) error {
+func (store *Sessions) Flash(w http.ResponseWriter, req *http.Request, flash Flash) error {
 	var flashes []Flash
 
 	sess := store.Load(req)
@@ -118,7 +115,7 @@ func (store *Store) Flash(w http.ResponseWriter, req *http.Request, flash Flash)
 }
 
 // Flashes returns a slice of flash messages from session data
-func (store *Store) Flashes(w http.ResponseWriter, req *http.Request) []Flash {
+func (store *Sessions) Flashes(w http.ResponseWriter, req *http.Request) []Flash {
 	var flashes []Flash
 	sess := store.Load(req)
 	sess.PopObject(w, FlashesKey, &flashes)
