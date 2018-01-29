@@ -8,11 +8,13 @@ import (
 )
 
 var funcs = template.FuncMap{
-	"assetURL":  assetURLFn,
+	"asset":     assetURLFn,
+	"url":       relURLFn,
 	"lower":     lower,
 	"upper":     upper,
 	"date":      dateFn,
 	"humanDate": readableDateFn,
+	"t":         translateFn,
 }
 
 func lower(input string) string {
@@ -28,6 +30,11 @@ func assetURLFn(input string) string {
 	return fmt.Sprintf("%s%s", url, input)
 }
 
+func relURLFn(input string) string {
+	url := "/" //os.Getenv("ASSET_URL")
+	return fmt.Sprintf("%s%s", url, input)
+}
+
 func dateFn(format string, input interface{}) string {
 	var t time.Time
 	switch date := input.(type) {
@@ -38,6 +45,10 @@ func dateFn(format string, input interface{}) string {
 	}
 
 	return t.Format(format)
+}
+
+func translateFn(language string, text string) string {
+	return text
 }
 
 func readableDateFn(t time.Time) string {

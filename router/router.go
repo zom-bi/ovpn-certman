@@ -5,6 +5,8 @@ import (
 	"os"
 	"strings"
 
+	"git.klink.asia/paul/certman/services"
+
 	"git.klink.asia/paul/certman/assets"
 	"git.klink.asia/paul/certman/handlers"
 	"git.klink.asia/paul/certman/views"
@@ -27,13 +29,16 @@ var (
 func HandleRoutes(db *gorm.DB) http.Handler {
 	mux := chi.NewMux()
 
-	//	mux.Use(middleware.RequestID)
-	mux.Use(middleware.Logger)
-	mux.Use(middleware.RealIP)
-	mux.Use(middleware.RedirectSlashes)
-	mux.Use(mw.Recoverer)
+	//mux.Use(middleware.RequestID)
+	mux.Use(middleware.Logger)          // log requests
+	mux.Use(middleware.RealIP)          // use proxy headers
+	mux.Use(middleware.RedirectSlashes) // redirect trailing slashes
+	mux.Use(mw.Recoverer)               // recover on panic
+	mux.Use(services.SessionStore.Use)  // use session storage
 
 	// we are serving the static files directly from the assets package
+	// this either means we use the embedded files, or live-load
+	// from the file system (if `--tags="dev"` is used).
 	fileServer(mux, "/static", assets.Assets)
 
 	mux.Route("/", func(r chi.Router) {
@@ -43,21 +48,35 @@ func HandleRoutes(db *gorm.DB) http.Handler {
 				csrf.Secure(false),
 				csrf.CookieName(csrfCookieName),
 				csrf.FieldName(csrfFieldName),
+				csrf.ErrorHandler(http.HandlerFunc(handlers.CSRFErrorHandler)),
 			))
 		}
 
-		r.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
-			view := views.New(req)
-			view.Render(w, "debug")
+		r.HandleFunc("/", v("debug"))
+
+		r.Route("/register", func(r chi.Router) {
+			r.Get("/", v("register"))
+			r.Post("/", handlers.RegisterHandler)
 		})
 
-		r.Get("/login", func(w http.ResponseWriter, req *http.Request) {
-			view := views.New(req)
-			view.Render(w, "login")
+		r.Route("/login", func(r chi.Router) {
+			r.Get("/", v("login"))
+			r.Post("/", handlers.LoginHandler)
 		})
 
-		r.Get("/certs", handlers.ListCertHandler(db))
-		r.HandleFunc("/certs/new", handlers.GenCertHandler(db))
+		//r.Post("/confirm-email/{token}", handlers.ConfirmEmailHandler(db))
+
+		r.Route("/forgot-password", func(r chi.Router) {
+			r.Get("/", v("forgot-password"))
+			r.Post("/", handlers.LoginHandler)
+		})
+
+		r.Route("/certs", func(r chi.Router) {
+			r.Use(mw.RequireLogin)
+			r.Get("/", handlers.ListCertHandler)
+			r.Post("/new", handlers.CreateCertHandler)
+			r.HandleFunc("/download/{ID}", handlers.DownloadCertHandler)
+		})
 
 		r.HandleFunc("/500", func(w http.ResponseWriter, req *http.Request) {
 			panic("500")
@@ -68,6 +87,14 @@ func HandleRoutes(db *gorm.DB) http.Handler {
 	mux.NotFound(handlers.NotFoundHandler)
 
 	return mux
+}
+
+// v is a helper function for quickly displaying a view
+func v(template string) http.HandlerFunc {
+	return func(w http.ResponseWriter, req *http.Request) {
+		view := views.New(req)
+		view.Render(w, template)
+	}
 }
 
 // fileServer sets up a http.FileServer handler to serve

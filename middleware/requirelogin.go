@@ -1,25 +1,20 @@
 package middleware
 
 import (
-	"log"
 	"net/http"
-	"runtime/debug"
 
-	"git.klink.asia/paul/certman/handlers"
+	"git.klink.asia/paul/certman/services"
 )
 
+// RequireLogin is a middleware that checks for a username in the active
+// session, and redirects to `/login` if no username was found.
 func RequireLogin(next http.Handler) http.Handler {
-	fn := func(w http.ResponseWriter, r *http.Request) {
-		defer func() {
-			if rvr := recover(); rvr != nil {
-				log.Println(rvr)
-				log.Println(string(debug.Stack()))
-				handlers.ErrorHandler(w, r)
-			}
-		}()
+	fn := func(w http.ResponseWriter, req *http.Request) {
+		if username := services.SessionStore.GetUserEmail(req); username == "" {
+			http.Redirect(w, req, "/login", http.StatusFound)
+		}
 
-		next.ServeHTTP(w, r)
+		next.ServeHTTP(w, req)
 	}
-
 	return http.HandlerFunc(fn)
 }

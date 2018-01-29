@@ -18,11 +18,15 @@ var templates map[string]*template.Template
 func LoadTemplates() {
 	templates = map[string]*template.Template{
 		"401": newTemplate("layouts/application.gohtml", "errors/401.gohtml"),
+		"403": newTemplate("layouts/application.gohtml", "errors/403.gohtml"),
 		"404": newTemplate("layouts/application.gohtml", "errors/404.gohtml"),
 		"500": newTemplate("layouts/application.gohtml", "errors/500.gohtml"),
 
+		"login":           newTemplate("layouts/auth.gohtml", "views/login.gohtml"),
+		"register":        newTemplate("layouts/auth.gohtml", "views/register.gohtml"),
+		"forgot-password": newTemplate("layouts/auth.gohtml", "views/forgot-password.gohtml"),
+
 		"debug":     newTemplate("layouts/application.gohtml", "shared/header.gohtml", "shared/footer.gohtml", "views/debug.gohtml"),
-		"login":     newTemplate("layouts/application.gohtml", "shared/header.gohtml", "shared/footer.gohtml", "views/login.gohtml"),
 		"cert_list": newTemplate("layouts/application.gohtml", "shared/header.gohtml", "shared/footer.gohtml", "views/cert_list.gohtml"),
 	}
 	return
