@@ -29,22 +29,9 @@ func main() {
 			HttpOnly:    true,
 			Lifetime:    24 * time.Hour,
 		},
-		Email: &services.EmailConfig{
-			SMTPEnabled:  false,
-			SMTPServer:   "example.com",
-			SMTPPort:     25,
-			SMTPUsername: "test",
-			SMTPPassword: "password",
-			SMTPTimeout:  5 * time.Second,
-			From:         "Mailtest <test@example.com>",
-		},
 	}
 
 	serviceProvider := services.NewProvider(&c)
-
-	// Start the mail daemon, which re-uses connections to send mails to the
-	// SMTP server
-	go serviceProvider.Email.Daemon()
 
 	// load and parse template files
 	views.LoadTemplates()

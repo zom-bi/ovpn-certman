@@ -23,17 +23,17 @@ type Model struct {
 // Client represent the OpenVPN client configuration
 type Client struct {
 	Model
-	Name       string
-	User       User
-	UserID     uint
+	Name       string `gorm:"index;unique_index:idx_name_user"`
+	User       string `gorm:"index;unique_index:idx_name_user"`
 	Cert       []byte
 	PrivateKey []byte
 }
 
 type ClientProvider interface {
 	CountClients() (uint, error)
-	CreateClient(*User) (*User, error)
-	ListClients(count, offset int) ([]*User, error)
-	GetClientByID(id uint) (*User, error)
+	CreateClient(*Client) (*Client, error)
+	ListClients(count, offset int) ([]*Client, error)
+	ListClientsForUser(user string, count, offset int) ([]*Client, error)
+	GetClientByID(id uint) (*Client, error)
 	DeleteClient(id uint) error
 }

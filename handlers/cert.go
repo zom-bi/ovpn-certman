@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"bytes"
 	"crypto/ecdsa"
 	"crypto/rand"
 	"crypto/rsa"
@@ -15,25 +16,38 @@ import (
 
 	"git.klink.asia/paul/certman/models"
 	"git.klink.asia/paul/certman/services"
+	"github.com/go-chi/chi"
 
 	"git.klink.asia/paul/certman/views"
 )
 
-func ListCertHandler(p *services.Provider) http.HandlerFunc {
+func ListClientsHandler(p *services.Provider) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		v := views.NewWithSession(req, p.Sessions)
-		v.Render(w, "cert_list")
+
+		username := p.Sessions.GetUsername(req)
+
+		clients, _ := p.DB.ListClientsForUser(username, 100, 0)
+
+		v.Vars["Clients"] = clients
+		v.Render(w, "client_list")
 	}
 }
 
 func CreateCertHandler(p *services.Provider) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
-		email := p.Sessions.GetUserEmail(req)
+		username := p.Sessions.GetUsername(req)
 		certname := req.FormValue("certname")
 
-		user, err := p.DB.GetUserByEmail(email)
-		if err != nil {
-			fmt.Printf("Could not fetch user for mail %s\n", email)
+		if !IsByteLength(certname, 2, 64) || !IsAlphanumeric(certname) {
+			p.Sessions.Flash(w, req,
+				services.Flash{
+					Type:    "danger",
+					Message: "The certificate name can only contain letters and numbers",
+				},
+			)
+			http.Redirect(w, req, "/certs", http.StatusFound)
+			return
 		}
 
 		// Load CA master certificate
@@ -47,29 +61,45 @@ func CreateCertHandler(p *services.Provider) http.HandlerFunc {
 		key, err := rsa.GenerateKey(rand.Reader, 2048)
 		if err != nil {
 			log.Fatalf("Could not generate keypair: %s", err)
+			p.Sessions.Flash(w, req,
+				services.Flash{
+					Type:    "danger",
+					Message: "The certificate key could not be generated",
+				},
+			)
+			http.Redirect(w, req, "/certs", http.StatusFound)
+			return
 		}
 
 		// Generate Certificate
-		derBytes, err := CreateCertificate(key, caCert, caKey)
+		commonName := fmt.Sprintf("%s@%s", username, certname)
+		derBytes, err := CreateCertificate(commonName, key, caCert, caKey)
 
 		// Initialize new client config
 		client := models.Client{
 			Name:       certname,
 			PrivateKey: x509.MarshalPKCS1PrivateKey(key),
 			Cert:       derBytes,
-			UserID:     user.ID,
+			User:       username,
 		}
 
 		// Insert client into database
-		_ = client
-		//if err := p.DB.Create(&client).Error; err != nil {
-		//	panic(err.Error())
-		//}
+		if err := p.DB.CreateClient(&client); err != nil {
+			log.Println(err.Error())
+			p.Sessions.Flash(w, req,
+				services.Flash{
+					Type:    "danger",
+					Message: "The certificate could not be added to the database",
+				},
+			)
+			http.Redirect(w, req, "/certs", http.StatusFound)
+			return
+		}
 
 		p.Sessions.Flash(w, req,
 			services.Flash{
 				Type:    "success",
-				Message: "The certificate was created successfully.",
+				Message: "The certificate was created successfully",
 			},
 		)
 
@@ -79,13 +109,42 @@ func CreateCertHandler(p *services.Provider) http.HandlerFunc {
 
 func DownloadCertHandler(p *services.Provider) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
-		//v := views.New(req)
-		//
-		//derBytes, err := CreateCertificate(key, caCert, caKey)
-		//pem.Encode(w, &pem.Block{Type: "CERTIFICATE", Bytes: derBytes})
-		//
-		//pkBytes := x509.MarshalPKCS1PrivateKey(key)
-		//pem.Encode(w, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: pkBytes})
+		v := views.New(req)
+		// detemine own username
+		username := p.Sessions.GetUsername(req)
+		name := chi.URLParam(req, "name")
+
+		client, err := p.DB.GetClientByNameUser(name, username)
+		if err != nil {
+			v.RenderError(w, http.StatusNotFound)
+			return
+		}
+
+		// cbuf and kbuf are buffers in which the PEM certificates are
+		// rendered into
+		var cbuf = new(bytes.Buffer)
+		var kbuf = new(bytes.Buffer)
+
+		pem.Encode(cbuf, &pem.Block{Type: "CERTIFICATE", Bytes: client.Cert})
+		pem.Encode(kbuf, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: client.PrivateKey})
+
+		vars := map[string]string{
+			"Cert": cbuf.String(),
+			"Key":  kbuf.String(),
+		}
+
+		t, err := views.GetTemplate("config.ovpn")
+		if err != nil {
+			log.Printf("Error loading certificate template: %s", err)
+			v.RenderError(w, http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/x-openvpn-profile")
+		w.Header().Set("Content-Disposition", "attachment; filename=\"config.ovpn\"")
+		w.WriteHeader(http.StatusOK)
+		log.Println(vars)
+		t.Execute(w, vars)
 		return
 	}
 }
@@ -117,10 +176,10 @@ func loadX509KeyPair(certFile, keyFile string) (*x509.Certificate, *rsa.PrivateK
 }
 
 // CreateCertificate creates a CA-signed certificate
-func CreateCertificate(key interface{}, caCert *x509.Certificate, caKey interface{}) ([]byte, error) {
+func CreateCertificate(commonName string, key interface{}, caCert *x509.Certificate, caKey interface{}) ([]byte, error) {
 	subj := caCert.Subject
 	// .. except for the common name
-	subj.CommonName = "clientName"
+	subj.CommonName = commonName
 
 	serialNumberLimit := new(big.Int).Lsh(big.NewInt(1), 128)
 	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)

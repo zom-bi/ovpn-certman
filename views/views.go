@@ -46,7 +46,7 @@ func NewWithSession(req *http.Request, sessionStore *services.Sessions) *View {
 				"Env":  "develop",
 			},
 			"flashes":  []services.Flash{},
-			"username": sessionStore.GetUserEmail(req),
+			"username": sessionStore.GetUsername(req),
 		},
 	}
 }

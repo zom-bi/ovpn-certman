@@ -34,7 +34,7 @@ func NewDB(conf *DBConfig) *DB {
 	}
 
 	// Migrate models
-	db.AutoMigrate(models.User{}, models.Client{})
+	db.AutoMigrate(models.Client{})
 	db.LogMode(conf.Log)
 
 	return &DB{
@@ -43,64 +43,53 @@ func NewDB(conf *DBConfig) *DB {
 	}
 }
 
-// CountUsers returns the number of Users in the datastore
-func (db *DB) CountUsers() (uint, error) {
+// CountClients returns the number of clients in the datastore
+func (db *DB) CountClients() (uint, error) {
 	var count uint
-	err := db.gorm.Find(&models.User{}).Count(&count).Error
+	err := db.gorm.Find(&models.Client{}).Count(&count).Error
 	return count, err
 }
 
-// CreateUser inserts a user into the datastore
-func (db *DB) CreateUser(user *models.User) error {
-	err := db.gorm.Create(&user).Error
+// CreateClient inserts a client into the datastore
+func (db *DB) CreateClient(client *models.Client) error {
+	err := db.gorm.Create(&client).Error
 	return err
 }
 
-// ListUsers returns a slice of 'count' users, starting at 'offset'
-func (db *DB) ListUsers(count, offset int) ([]*models.User, error) {
-	var users = make([]*models.User, 0)
+// ListClients returns a slice of 'count' client, starting at 'offset'
+func (db *DB) ListClients(count, offset int) ([]*models.Client, error) {
+	var clients = make([]*models.Client, 0)
 
-	err := db.gorm.Find(&users).Limit(count).Offset(offset).Error
+	err := db.gorm.Find(&clients).Limit(count).Offset(offset).Error
 
-	return users, err
+	return clients, err
 }
 
-// GetUserByID returns a single user by ID
-func (db *DB) GetUserByID(id uint) (*models.User, error) {
-	var user models.User
-	err := db.gorm.Where("id = ?", id).First(&user).Error
-	return &user, err
+// ListClientsForUser returns a slice of 'count' client for user 'user', starting at 'offset'
+func (db *DB) ListClientsForUser(user string, count, offset int) ([]*models.Client, error) {
+	var clients = make([]*models.Client, 0)
+
+	err := db.gorm.Find(&clients).Where("user = ?", user).Limit(count).Offset(offset).Error
+
+	return clients, err
 }
 
-// GetUserByEmail returns a single user by email
-func (db *DB) GetUserByEmail(email string) (*models.User, error) {
-	var user models.User
-	err := db.gorm.Where("email = ?", email).First(&user).Error
-	return &user, err
+// GetClientByID returns a single client by ID
+func (db *DB) GetClientByID(id uint) (*models.Client, error) {
+	var client models.Client
+	err := db.gorm.Where("id = ?", id).First(&client).Error
+	return &client, err
 }
 
-// DeleteUser removes a user from the datastore
-func (db *DB) DeleteUser(id uint) error {
-	var user models.User
-	err := db.gorm.Where("id = ?", id).Delete(&user).Error
-	return err
+// GetClientByNameUser returns a single client by ID
+func (db *DB) GetClientByNameUser(name, user string) (*models.Client, error) {
+	var client models.Client
+	err := db.gorm.Where("name = ?", name).Where("user = ?", user).First(&client).Error
+	return &client, err
 }
 
-// CreatePasswordReset creates a new password reset token
-func (db *DB) CreatePasswordReset(pwReset *models.PasswordReset) error {
-	err := db.gorm.Create(&pwReset).Error
-	return err
-}
-
-// GetPasswordResetByToken retrieves a PasswordReset by token
-func (db *DB) GetPasswordResetByToken(token string) (*models.PasswordReset, error) {
-	var pwReset models.PasswordReset
-	err := db.gorm.Where("token = ?", token).First(&pwReset).Error
-	return &pwReset, err
-}
-
-// DeletePasswordResetsByUserID deletes all pending password resets for a user
-func (db *DB) DeletePasswordResetsByUserID(uid uint) error {
-	err := db.gorm.Where("user_id = ?", uid).Delete(&models.PasswordReset{}).Error
+// DeleteClient removes a client from the datastore
+func (db *DB) DeleteClient(id uint) error {
+	err := db.gorm.Where("id = ?", id).Delete(&models.Client{}).Error
 	return err
 }

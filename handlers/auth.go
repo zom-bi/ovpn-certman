@@ -1,179 +1,86 @@
 package handlers
 
 import (
-	"bytes"
+	"encoding/json"
 	"fmt"
 	"net/http"
-	"time"
+	"os"
 
 	"git.klink.asia/paul/certman/views"
-
-	"github.com/go-chi/chi"
-
-	"github.com/gorilla/securecookie"
+	"golang.org/x/oauth2"
 
 	"git.klink.asia/paul/certman/services"
-
-	"git.klink.asia/paul/certman/models"
 )
 
-func RegisterHandler(p *services.Provider) http.HandlerFunc {
-	return func(w http.ResponseWriter, req *http.Request) {
-		// Get parameters
-		email := req.Form.Get("email")
-
-		user := models.User{}
-		user.Email = email
-
-		// don't set a password, user will get password reset request via mail
-		user.HashedPassword = []byte{}
-
-		err := p.DB.CreateUser(&user)
-		if err != nil {
-			panic(err.Error)
-		}
-
-		if err := createPasswordReset(p, &user); err != nil {
-			p.Sessions.Flash(w, req,
-				services.Flash{
-					Type:    "danger",
-					Message: "The registration email could not be generated.",
-				},
-			)
-			http.Redirect(w, req, "/register", http.StatusFound)
-		}
-
-		p.Sessions.Flash(w, req,
-			services.Flash{
-				Type:    "success",
-				Message: "The user was created. Check your inbox for the confirmation email.",
-			},
-		)
-
-		http.Redirect(w, req, "/login", http.StatusFound)
-		return
-	}
+var GitlabConfig = &oauth2.Config{
+	ClientID:     os.Getenv("OAUTH2_CLIENT_ID"),
+	ClientSecret: os.Getenv("OAUTH2_CLIENT_SECRET"),
+	Scopes:       []string{"read_user"},
+	RedirectURL:  os.Getenv("HOST") + "/login/oauth2/redirect",
+	Endpoint: oauth2.Endpoint{
+		AuthURL:  os.Getenv("OAUTH2_AUTH_URL"),
+		TokenURL: os.Getenv("OAUTH2_TOKEN_URL"),
+	},
 }
 
-func LoginHandler(p *services.Provider) http.HandlerFunc {
-	return func(w http.ResponseWriter, req *http.Request) {
-		// Get parameters
-		email := req.Form.Get("email")
-		password := req.Form.Get("password")
-
-		user, err := p.DB.GetUserByEmail(email)
-		if err != nil {
-			// could not find user
-			p.Sessions.Flash(
-				w, req, services.Flash{
-					Type: "warning", Message: "Invalid Email or Password.",
-				},
-			)
-			http.Redirect(w, req, "/login", http.StatusFound)
-			return
-		}
-
-		if !user.EmailValid {
-			p.Sessions.Flash(
-				w, req, services.Flash{
-					Type: "warning", Message: "You need to confirm your email before logging in.",
-				},
-			)
-			http.Redirect(w, req, "/login", http.StatusFound)
-			return
-		}
-
-		if err := user.CheckPassword(password); err != nil {
-			// wrong password
-			p.Sessions.Flash(
-				w, req, services.Flash{
-					Type: "warning", Message: "Invalid Email or Password.",
-				},
-			)
-			http.Redirect(w, req, "/login", http.StatusFound)
-			return
-		}
-
-		// user is logged in, set cookie
-		p.Sessions.SetUserEmail(w, req, email)
-
-		http.Redirect(w, req, "/certs", http.StatusSeeOther)
-	}
-}
-
-func ConfirmEmailHandler(p *services.Provider) http.HandlerFunc {
+func OAuth2Endpoint(p *services.Provider) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		v := views.NewWithSession(req, p.Sessions)
 
-		switch req.Method {
-		case "GET":
-			token := chi.URLParam(req, "token")
-			pwr, err := p.DB.GetPasswordResetByToken(token)
-			_ = pwr
-			if err != nil {
-				v.RenderError(w, 404)
-				return
-			}
-			v.Render(w, "email-set-password")
-		case "POST":
-			password := req.Form.Get("password")
-			token := req.Form.Get("token")
-			pwr, err := p.DB.GetPasswordResetByToken(token)
-			if err != nil {
-				v.RenderError(w, 404)
-				return
-			}
+		code := req.FormValue("code")
 
-			user, err := p.DB.GetUserByID(pwr.UserID)
-			if err != nil {
-				v.RenderError(w, 500)
-				return
-			}
-
-			user.SetPassword(password)
-
-			//err := p.DB.UpdateUser(user.ID, &user)
-			if err != nil {
-				v.RenderError(w, 500)
-				return
-			}
-
-			err = p.DB.DeletePasswordResetsByUserID(pwr.UserID)
-
-		default:
-			v.RenderError(w, 405)
+		// exchange code for token
+		accessToken, err := GitlabConfig.Exchange(oauth2.NoContext, code)
+		if err != nil {
+			fmt.Println(err)
+			http.NotFound(w, req)
+			return
 		}
 
-		// try to get post params
+		if accessToken.Valid() {
+			// generate a client using the access token
+			httpClient := GitlabConfig.Client(oauth2.NoContext, accessToken)
 
-		fmt.Fprintln(w, "Okay.")
+			apiRequest, err := http.NewRequest("GET", "https://git.klink.asia/api/v4/user", nil)
+			if err != nil {
+				v.RenderError(w, http.StatusNotFound)
+				return
+			}
+
+			resp, err := httpClient.Do(apiRequest)
+			if err != nil {
+				fmt.Println(err.Error())
+				v.RenderError(w, http.StatusInternalServerError)
+				return
+			}
+
+			var user struct {
+				Username string `json:"username"`
+			}
+
+			err = json.NewDecoder(resp.Body).Decode(&user)
+			if err != nil {
+				fmt.Println(err.Error())
+				v.RenderError(w, http.StatusInternalServerError)
+				return
+			}
+
+			if user.Username != "" {
+				p.Sessions.SetUsername(w, req, user.Username)
+				http.Redirect(w, req, "/certs", http.StatusFound)
+				return
+			}
+
+			fmt.Println(err.Error())
+			v.RenderError(w, http.StatusInternalServerError)
+			return
+		}
 	}
 }
 
-func createPasswordReset(p *services.Provider, user *models.User) error {
-	// create the reset request
-	pwr := models.PasswordReset{
-		UserID:     user.ID,
-		Token:      string(securecookie.GenerateRandomKey(32)),
-		ValidUntil: time.Now().Add(6 * time.Hour),
+func GetLoginHandler(p *services.Provider) http.HandlerFunc {
+	return func(w http.ResponseWriter, req *http.Request) {
+		authURL := GitlabConfig.AuthCodeURL("", oauth2.AccessTypeOnline)
+		http.Redirect(w, req, authURL, http.StatusFound)
 	}
-
-	if err := p.DB.CreatePasswordReset(&pwr); err != nil {
-		return err
-	}
-
-	var subject string
-	var text *bytes.Buffer
-
-	if user.EmailValid {
-		subject = "Password reset"
-		text.WriteString("Somebody (hopefully you) has requested a password reset.\nClick below to reset your password:\n")
-	} else {
-		// If the user email has not been confirmed yet, send out
-		// "mail confirmation"-mail instead
-		subject = "Email confirmation"
-		text.WriteString("Hello, thanks you for signing up!\nClick below to verify this email address\n")
-	}
-
-	return p.Email.Send(user.Email, subject, text.String(), "")
 }

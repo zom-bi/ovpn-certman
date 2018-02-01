@@ -51,34 +51,18 @@ func HandleRoutes(provider *services.Provider) http.Handler {
 			))
 		}
 
-		r.HandleFunc("/", v("debug"))
-
-		r.Route("/register", func(r chi.Router) {
-			r.Get("/", v("register"))
-			r.Post("/", handlers.RegisterHandler(provider))
-		})
+		r.HandleFunc("/", http.RedirectHandler("certs", http.StatusFound).ServeHTTP)
 
 		r.Route("/login", func(r chi.Router) {
-			r.Get("/", v("login"))
-			r.Post("/", handlers.LoginHandler(provider))
-		})
-
-		r.Post("/confirm-email/{token}", handlers.ConfirmEmailHandler(provider))
-
-		r.Route("/forgot-password", func(r chi.Router) {
-			r.Get("/", v("forgot-password"))
-			r.Post("/", handlers.LoginHandler(provider))
+			r.Get("/", handlers.GetLoginHandler(provider))
+			r.Get("/oauth2/redirect", handlers.OAuth2Endpoint(provider))
 		})
 
 		r.Route("/certs", func(r chi.Router) {
 			r.Use(mw.RequireLogin(provider.Sessions))
-			r.Get("/", handlers.ListCertHandler(provider))
+			r.Get("/", handlers.ListClientsHandler(provider))
 			r.Post("/new", handlers.CreateCertHandler(provider))
-			r.HandleFunc("/download/{ID}", handlers.DownloadCertHandler(provider))
-		})
-
-		r.HandleFunc("/500", func(w http.ResponseWriter, req *http.Request) {
-			panic("500")
+			r.HandleFunc("/download/{name}", handlers.DownloadCertHandler(provider))
 		})
 	})
 

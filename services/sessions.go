@@ -49,7 +49,7 @@ func NewSessions(conf *SessionsConfig) *Sessions {
 	return &Sessions{store}
 }
 
-func (store *Sessions) GetUserEmail(req *http.Request) string {
+func (store *Sessions) GetUsername(req *http.Request) string {
 	if store == nil {
 		// if store was not initialized, all requests fail
 		log.Println("Zero pointer when checking session for username")
@@ -69,7 +69,7 @@ func (store *Sessions) GetUserEmail(req *http.Request) string {
 	return email
 }
 
-func (store *Sessions) SetUserEmail(w http.ResponseWriter, req *http.Request, email string) {
+func (store *Sessions) SetUsername(w http.ResponseWriter, req *http.Request, username string) {
 	if store == nil {
 		// if store was not initialized, do nothing
 		return
@@ -80,7 +80,7 @@ func (store *Sessions) SetUserEmail(w http.ResponseWriter, req *http.Request, em
 	// renew token to avoid session pinning/fixation attack
 	sess.RenewToken(w)
 
-	sess.PutString(w, UserEmailKey, email)
+	sess.PutString(w, UserEmailKey, username)
 
 }
 

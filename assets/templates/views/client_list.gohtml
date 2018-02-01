@@ -1,0 +1,65 @@
+{{ define "meta" }}
+    <title>Log in</title>
+{{ end}}
+
+{{ define "content" }}
+    <section class="content">
+        <div class="section">
+            <div class="container">
+                <div class="columns">
+                    <div class="column">
+                        <h1>Certificates</h1>
+
+                        <table class="table">
+                            <thead>
+                                <th>Device</th>
+                                <th width="20%">Created</th>
+                                <th width="20%" class="has-text-centered">Actions</th>
+                            </thead>
+                            <tfoot>
+                                <form action="/certs/new" method="POST">
+                                    <th colspan="2">
+                                        <div class="field has-addons">
+                                            <p class="control is-marginless">
+                                                <a class="button is-static">
+                                                    {{ $.username }}@
+                                                </a>
+                                            </p>
+                                            <p class="control  is-marginless is-expanded">
+                                                <input name="certname" class="input" type="text" placeholder="Certificate name (e.g. Laptop)">
+                                            </p>
+                                        </div>
+                                    </th>
+                                    <th>{{ .csrfField }}<input type="submit" class="button is-success is-fullwidth" value="Create"/></th>
+                                </form>
+                            </tfoot>
+                            <tbody>
+                            {{ range .Clients }}
+                            <tr>
+                                <td class="is-vcentered"><p>{{ $.username }}@{{ .Name }}</p></td>
+                                <td><time title="{{ .CreatedAt.UTC }}">{{ .CreatedAt | humanDate }}</time></td>
+                                <td>
+                                <div class="field has-addons">
+                                    <p class="control is-marginless is-expanded">
+                                        <a href="/certs/download/{{ .Name }}" class="button is-primary is-fullwidth">Download</a>
+                                    </p>
+                                    <p class="control is-marginless">
+                                        <a class="button is-danger">
+                                            <span class="icon is-small">
+                                                <i class="fas fa-trash"></i>
+                                            </span>
+                                        </a>
+                                    </p>
+                                </div>
+                                </td>
+                            </tr>
+                            {{ end }}
+                            </tbody>
+                        </table>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+{{ end}}
