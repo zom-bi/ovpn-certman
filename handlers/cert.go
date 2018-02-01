@@ -31,8 +31,7 @@ func CreateCertHandler(p *services.Provider) http.HandlerFunc {
 		email := p.Sessions.GetUserEmail(req)
 		certname := req.FormValue("certname")
 
-		user := models.User{}
-		err := p.DB.Where(&models.User{Email: email}).Find(&user).Error
+		user, err := p.DB.GetUserByEmail(email)
 		if err != nil {
 			fmt.Printf("Could not fetch user for mail %s\n", email)
 		}
@@ -62,9 +61,10 @@ func CreateCertHandler(p *services.Provider) http.HandlerFunc {
 		}
 
 		// Insert client into database
-		if err := p.DB.Create(&client).Error; err != nil {
-			panic(err.Error())
-		}
+		_ = client
+		//if err := p.DB.Create(&client).Error; err != nil {
+		//	panic(err.Error())
+		//}
 
 		p.Sessions.Flash(w, req,
 			services.Flash{

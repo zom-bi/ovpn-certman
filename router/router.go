@@ -63,7 +63,7 @@ func HandleRoutes(provider *services.Provider) http.Handler {
 			r.Post("/", handlers.LoginHandler(provider))
 		})
 
-		//r.Post("/confirm-email/{token}", handlers.ConfirmEmailHandler(db))
+		r.Post("/confirm-email/{token}", handlers.ConfirmEmailHandler(provider))
 
 		r.Route("/forgot-password", func(r chi.Router) {
 			r.Get("/", v("forgot-password"))

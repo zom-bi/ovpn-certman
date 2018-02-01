@@ -1,26 +1,10 @@
 package models
 
 import (
-	"errors"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
 )
-
-var (
-	// ErrNotImplemented gets thrown if some action was not attempted,
-	// because it is not implemented in the code yet.
-	ErrNotImplemented = errors.New("Not implemented")
-)
-
-// Model is a base model definition, including helpful fields for dealing with
-// models in a database
-type Model struct {
-	ID        uint `gorm:"primary_key"`
-	CreatedAt time.Time
-	UpdatedAt time.Time
-	DeletedAt *time.Time `sql:"index"`
-}
 
 // User represents a User of the system which is able to log in
 type User struct {
@@ -50,27 +34,22 @@ func (u *User) CheckPassword(password string) error {
 
 type UserProvider interface {
 	CountUsers() (uint, error)
-	CreateUser(*User) (*User, error)
+	CreateUser(*User) error
 	ListUsers(count, offset int) ([]*User, error)
 	GetUserByID(id uint) (*User, error)
 	GetUserByEmail(email string) (*User, error)
 	DeleteUser(id uint) error
 }
 
-// Client represent the OpenVPN client configuration
-type Client struct {
+type PasswordReset struct {
 	Model
-	Name       string
-	User       User
+	User       *User
 	UserID     uint
-	Cert       []byte
-	PrivateKey []byte
+	Token      string
+	ValidUntil time.Time
 }
 
-type ClientProvider interface {
-	CountClients() (uint, error)
-	CreateClient(*User) (*User, error)
-	ListClients(count, offset int) ([]*User, error)
-	GetClientByID(id uint) (*User, error)
-	DeleteClient(id uint) error
+type PasswordResetProvider interface {
+	CreatePasswordReset(*PasswordReset) error
+	GetPasswordResetByToken(token string) (*PasswordReset, error)
 }

@@ -30,6 +30,7 @@ func main() {
 			Lifetime:    24 * time.Hour,
 		},
 		Email: &services.EmailConfig{
+			SMTPEnabled:  false,
 			SMTPServer:   "example.com",
 			SMTPPort:     25,
 			SMTPUsername: "test",

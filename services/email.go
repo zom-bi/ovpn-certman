@@ -14,6 +14,7 @@ var (
 
 type EmailConfig struct {
 	From         string
+	SMTPEnabled  bool
 	SMTPServer   string
 	SMTPPort     int
 	SMTPUsername string
@@ -45,12 +46,19 @@ func (email *Email) Send(to, subject, text, html string) error {
 		return ErrMailUninitializedConfig
 	}
 
+	if !email.config.SMTPEnabled {
+		log.Printf("SMTP is disabled in config, printing out email text instead:\nTo: %s\n%s", to, text)
+	}
+
 	m := mail.NewMessage()
 	m.SetHeader("From", email.config.From)
 	m.SetHeader("To", to)
 	m.SetHeader("Subject", subject)
 	m.SetBody("text/plain", text)
-	m.AddAlternative("text/html", html)
+
+	if len(html) > 0 {
+		m.AddAlternative("text/html", html)
+	}
 
 	// put email in chan
 	email.mailChan <- m
@@ -62,6 +70,11 @@ func (email *Email) Send(to, subject, text, html string) error {
 func (email *Email) Daemon() {
 	if email.config == nil {
 		log.Print("Error: trying to set up mail deamon with uninitialized config.")
+		return
+	}
+
+	if !email.config.SMTPEnabled {
+		log.Print("SMTP is disabled in config, emails will be printed instead.")
 		return
 	}
 
