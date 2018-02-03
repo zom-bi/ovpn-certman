@@ -3,10 +3,10 @@ FROM golang:1.9
 WORKDIR /go/src/git.klink.asia/paul/certman
 ADD . .
 RUN \
+    go get -tags="dev" -v git.klink.asia/paul/certman && \
     go get github.com/shurcooL/vfsgen/cmd/vfsgendev && \
     go generate git.klink.asia/paul/certman/assets && \
-    go get -v git.klink.asia/paul/certman && \
-    go build -tags netgo
+    go build -tags="netgo"
 
 FROM scratch
 ENV \

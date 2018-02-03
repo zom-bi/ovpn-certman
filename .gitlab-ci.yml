@@ -79,9 +79,12 @@ build_image:
   tags:
     - dind
   image: "docker:latest"
-  script: 
+  services:
+    - docker:dind
+  script:
+    - cd $CI_PROJECT_DIR
     - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
     - docker build -t $CI_REGISTRY_IMAGE:${CI_COMMIT_REF_NAME#v} .
     - docker push $CI_REGISTRY_IMAGE:${CI_COMMIT_REF_NAME#v}
-  only:
-    - tags
+#  only:
+#    - tags
