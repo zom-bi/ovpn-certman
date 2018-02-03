@@ -10,12 +10,14 @@ RUN \
 
 FROM scratch
 ENV \
+    APP_KEY="" \
     OAUTH2_CLIENT_ID="" \
     OAUTH2_CLIENT_SECRET="" \
-    APP_KEY="" \
     OAUTH2_AUTH_URL="https://gitlab.example.com/oauth/authorize" \
     OAUTH2_TOKEN_URL="https://gitlab.example.com/oauth/token" \
+    OAUTH2_REDIRECT_URL="https://certman.example.com/login/oauth2/redirect" \
     USER_ENDPOINT="https://gitlab.example.com/api/v4/user" \
-    OAUTH2_REDIRECT_URL="https://certman.example.com/login/oauth2/redirect"
+    APP_KEY=""
+COPY --from=0 /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=0 /go/src/git.klink.asia/paul/certman/certman /
 ENTRYPOINT ["/certman"]

@@ -39,7 +39,7 @@ func main() {
 	mux := router.HandleRoutes(serviceProvider)
 
 	log.Println(".. server")
-	err := http.ListenAndServe(":8000", mux)
+	err := http.ListenAndServe(os.Getenv("APP_LISTEN"), mux)
 	log.Fatalf(err.Error())
 }
 

@@ -35,3 +35,4 @@ variables:
  * `OAUTH2_REDIRECT_URL` the redirect URL used by the app, usually the hostname suffixed by "/login/oauth2/redirect"
  * `USER_ENDPOINT` the URL to the Identity provider user endpoint, for gitlab this is "/api/v4/user". The "username" attribute of the returned JSON will used for authentication.
  * `APP_KEY` random ASCII string, 32 characters in length. Used for cookie generation.
+ * `APP_LISTEN` port and ip to listen on, e.g. `:8000` or `127.0.0.1:3000`
