@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"git.klink.asia/paul/certman/services"
+	"golang.org/x/oauth2"
 
 	"git.klink.asia/paul/certman/assets"
 	"git.klink.asia/paul/certman/handlers"
@@ -35,6 +36,18 @@ func HandleRoutes(provider *services.Provider) http.Handler {
 	mux.Use(mw.Recoverer)                  // recover on panic
 	mux.Use(provider.Sessions.Manager.Use) // use session storage
 
+	// TODO: move this code away from here
+	oauth2Config := &oauth2.Config{
+		ClientID:     os.Getenv("OAUTH2_CLIENT_ID"),
+		ClientSecret: os.Getenv("OAUTH2_CLIENT_SECRET"),
+		Scopes:       []string{"read_user"},
+		RedirectURL:  os.Getenv("OAUTH2_REDIRECT_URL"),
+		Endpoint: oauth2.Endpoint{
+			AuthURL:  os.Getenv("OAUTH2_AUTH_URL"),
+			TokenURL: os.Getenv("OAUTH2_TOKEN_URL"),
+		},
+	}
+
 	// we are serving the static files directly from the assets package
 	// this either means we use the embedded files, or live-load
 	// from the file system (if `--tags="dev"` is used).
@@ -54,8 +67,8 @@ func HandleRoutes(provider *services.Provider) http.Handler {
 		r.HandleFunc("/", http.RedirectHandler("certs", http.StatusFound).ServeHTTP)
 
 		r.Route("/login", func(r chi.Router) {
-			r.Get("/", handlers.GetLoginHandler(provider))
-			r.Get("/oauth2/redirect", handlers.OAuth2Endpoint(provider))
+			r.Get("/", handlers.GetLoginHandler(provider, oauth2Config))
+			r.Get("/oauth2/redirect", handlers.OAuth2Endpoint(provider, oauth2Config))
 		})
 
 		r.Route("/certs", func(r chi.Router) {
@@ -63,7 +76,10 @@ func HandleRoutes(provider *services.Provider) http.Handler {
 			r.Get("/", handlers.ListClientsHandler(provider))
 			r.Post("/new", handlers.CreateCertHandler(provider))
 			r.HandleFunc("/download/{name}", handlers.DownloadCertHandler(provider))
+			r.Post("/delete/{name}", handlers.DeleteCertHandler(provider))
 		})
+
+		r.Get("/unconfigured-backend", handlers.NotFoundHandler)
 	})
 
 	// what should happen if no route matches

@@ -8,10 +8,12 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"html/template"
 	"io/ioutil"
 	"log"
 	"math/big"
 	"net/http"
+	"strings"
 	"time"
 
 	"git.klink.asia/paul/certman/models"
@@ -27,7 +29,7 @@ func ListClientsHandler(p *services.Provider) http.HandlerFunc {
 
 		username := p.Sessions.GetUsername(req)
 
-		clients, _ := p.DB.ListClientsForUser(username, 100, 0)
+		clients, _ := p.ClientCollection.ListClientsForUser(username)
 
 		v.Vars["Clients"] = clients
 		v.Render(w, "client_list")
@@ -39,7 +41,8 @@ func CreateCertHandler(p *services.Provider) http.HandlerFunc {
 		username := p.Sessions.GetUsername(req)
 		certname := req.FormValue("certname")
 
-		if !IsByteLength(certname, 2, 64) || !IsAlphanumeric(certname) {
+		// Validate certificate Name
+		if !IsByteLength(certname, 2, 64) || !IsDNSName(certname) {
 			p.Sessions.Flash(w, req,
 				services.Flash{
 					Type:    "danger",
@@ -49,6 +52,10 @@ func CreateCertHandler(p *services.Provider) http.HandlerFunc {
 			http.Redirect(w, req, "/certs", http.StatusFound)
 			return
 		}
+
+		// lowercase the certificate name, to avoid problems with the case
+		// insensitive matching inside OpenVPN
+		certname = strings.ToLower(certname)
 
 		// Load CA master certificate
 		caCert, caKey, err := loadX509KeyPair("ca.crt", "ca.key")
@@ -78,13 +85,14 @@ func CreateCertHandler(p *services.Provider) http.HandlerFunc {
 		// Initialize new client config
 		client := models.Client{
 			Name:       certname,
+			CreatedAt:  time.Now(),
 			PrivateKey: x509.MarshalPKCS1PrivateKey(key),
 			Cert:       derBytes,
 			User:       username,
 		}
 
 		// Insert client into database
-		if err := p.DB.CreateClient(&client); err != nil {
+		if err := p.ClientCollection.CreateClient(&client); err != nil {
 			log.Println(err.Error())
 			p.Sessions.Flash(w, req,
 				services.Flash{
@@ -107,6 +115,40 @@ func CreateCertHandler(p *services.Provider) http.HandlerFunc {
 	}
 }
 
+func DeleteCertHandler(p *services.Provider) http.HandlerFunc {
+	return func(w http.ResponseWriter, req *http.Request) {
+		v := views.New(req)
+		// detemine own username
+		username := p.Sessions.GetUsername(req)
+		name := chi.URLParam(req, "name")
+
+		client, err := p.ClientCollection.GetClientByNameUser(name, username)
+		if err != nil {
+			v.RenderError(w, http.StatusNotFound)
+			return
+		}
+
+		err = p.ClientCollection.DeleteClient(client.ID)
+		if err != nil {
+			p.Sessions.Flash(w, req,
+				services.Flash{
+					Type:    "danger",
+					Message: "Failed to delete certificate",
+				},
+			)
+			http.Redirect(w, req, "/certs", http.StatusFound)
+		}
+
+		p.Sessions.Flash(w, req,
+			services.Flash{
+				Type:    "success",
+				Message: template.HTML(fmt.Sprintf("Successfully deleted client <strong>%s</strong>", client.Name)),
+			},
+		)
+		http.Redirect(w, req, "/certs", http.StatusFound)
+	}
+}
+
 func DownloadCertHandler(p *services.Provider) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		v := views.New(req)
@@ -114,7 +156,7 @@ func DownloadCertHandler(p *services.Provider) http.HandlerFunc {
 		username := p.Sessions.GetUsername(req)
 		name := chi.URLParam(req, "name")
 
-		client, err := p.DB.GetClientByNameUser(name, username)
+		client, err := p.ClientCollection.GetClientByNameUser(name, username)
 		if err != nil {
 			v.RenderError(w, http.StatusNotFound)
 			return
@@ -143,7 +185,6 @@ func DownloadCertHandler(p *services.Provider) http.HandlerFunc {
 		w.Header().Set("Content-Type", "application/x-openvpn-profile")
 		w.Header().Set("Content-Disposition", "attachment; filename=\"config.ovpn\"")
 		w.WriteHeader(http.StatusOK)
-		log.Println(vars)
 		t.Execute(w, vars)
 		return
 	}
@@ -159,10 +200,8 @@ func loadX509KeyPair(certFile, keyFile string) (*x509.Certificate, *rsa.PrivateK
 	if err != nil {
 		return nil, nil, err
 	}
-	cpb, cr := pem.Decode(cf)
-	fmt.Println(string(cr))
-	kpb, kr := pem.Decode(kf)
-	fmt.Println(string(kr))
+	cpb, _ := pem.Decode(cf)
+	kpb, _ := pem.Decode(kf)
 	crt, err := x509.ParseCertificate(cpb.Bytes)
 
 	if err != nil {
@@ -191,11 +230,10 @@ func CreateCertificate(commonName string, key interface{}, caCert *x509.Certific
 		SerialNumber: serialNumber,
 		Subject:      subj,
 
-		NotBefore: time.Now(),
-		NotAfter:  time.Now().Add(24 * time.Hour * 356 * 5),
+		NotBefore: time.Now().Add(-5 * time.Minute),         // account for clock shift
+		NotAfter:  time.Now().Add(24 * time.Hour * 356 * 5), // 5 years ought to be enough!
 
-		SignatureAlgorithm: x509.SHA256WithRSA,
-		//KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature | x509.KeyUsageDataEncipherment,
+		SignatureAlgorithm:    x509.SHA256WithRSA,
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth},
 		BasicConstraintsValid: true,
 	}

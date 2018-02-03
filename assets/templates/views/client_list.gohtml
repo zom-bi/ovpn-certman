@@ -1,5 +1,5 @@
 {{ define "meta" }}
-    <title>Log in</title>
+    <title>Certificate List</title>
 {{ end}}
 
 {{ define "content" }}
@@ -8,7 +8,7 @@
             <div class="container">
                 <div class="columns">
                     <div class="column">
-                        <h1>Certificates</h1>
+                        <h1 class="title">Certificates for {{ .username }}:</h1>
 
                         <table class="table">
                             <thead>
@@ -25,7 +25,7 @@
                                                     {{ $.username }}@
                                                 </a>
                                             </p>
-                                            <p class="control  is-marginless is-expanded">
+                                            <p class="control is-marginless is-expanded">
                                                 <input name="certname" class="input" type="text" placeholder="Certificate name (e.g. Laptop)">
                                             </p>
                                         </div>
@@ -36,20 +36,23 @@
                             <tbody>
                             {{ range .Clients }}
                             <tr>
-                                <td class="is-vcentered"><p>{{ $.username }}@{{ .Name }}</p></td>
+                                <td class="is-vcentered"><p>{{ .User }}@{{ .Name }}</p></td>
                                 <td><time title="{{ .CreatedAt.UTC }}">{{ .CreatedAt | humanDate }}</time></td>
                                 <td>
                                 <div class="field has-addons">
                                     <p class="control is-marginless is-expanded">
                                         <a href="/certs/download/{{ .Name }}" class="button is-primary is-fullwidth">Download</a>
                                     </p>
-                                    <p class="control is-marginless">
-                                        <a class="button is-danger">
-                                            <span class="icon is-small">
-                                                <i class="fas fa-trash"></i>
-                                            </span>
-                                        </a>
-                                    </p>
+                                    <div class="control is-marginless">
+                                        <form action="/certs/delete/{{ .Name }}" method="POST">
+                                            {{ $.csrfField }}
+                                            <button class="button is-danger" type="submit">
+                                                <span class="icon is-small">
+                                                    <i class="fas fa-trash"></i>
+                                                </span>
+                                            </button>
+                                        </form>
+                                    </div>
                                 </div>
                                 </td>
                             </tr>

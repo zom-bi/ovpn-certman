@@ -12,25 +12,14 @@ import (
 	"git.klink.asia/paul/certman/services"
 )
 
-var GitlabConfig = &oauth2.Config{
-	ClientID:     os.Getenv("OAUTH2_CLIENT_ID"),
-	ClientSecret: os.Getenv("OAUTH2_CLIENT_SECRET"),
-	Scopes:       []string{"read_user"},
-	RedirectURL:  os.Getenv("HOST") + "/login/oauth2/redirect",
-	Endpoint: oauth2.Endpoint{
-		AuthURL:  os.Getenv("OAUTH2_AUTH_URL"),
-		TokenURL: os.Getenv("OAUTH2_TOKEN_URL"),
-	},
-}
-
-func OAuth2Endpoint(p *services.Provider) http.HandlerFunc {
+func OAuth2Endpoint(p *services.Provider, config *oauth2.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		v := views.NewWithSession(req, p.Sessions)
 
 		code := req.FormValue("code")
 
 		// exchange code for token
-		accessToken, err := GitlabConfig.Exchange(oauth2.NoContext, code)
+		accessToken, err := config.Exchange(oauth2.NoContext, code)
 		if err != nil {
 			fmt.Println(err)
 			http.NotFound(w, req)
@@ -39,9 +28,9 @@ func OAuth2Endpoint(p *services.Provider) http.HandlerFunc {
 
 		if accessToken.Valid() {
 			// generate a client using the access token
-			httpClient := GitlabConfig.Client(oauth2.NoContext, accessToken)
+			httpClient := config.Client(oauth2.NoContext, accessToken)
 
-			apiRequest, err := http.NewRequest("GET", "https://git.klink.asia/api/v4/user", nil)
+			apiRequest, err := http.NewRequest("GET", os.Getenv("USER_ENDPOINT"), nil)
 			if err != nil {
 				v.RenderError(w, http.StatusNotFound)
 				return
@@ -78,9 +67,9 @@ func OAuth2Endpoint(p *services.Provider) http.HandlerFunc {
 	}
 }
 
-func GetLoginHandler(p *services.Provider) http.HandlerFunc {
+func GetLoginHandler(p *services.Provider, config *oauth2.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
-		authURL := GitlabConfig.AuthCodeURL("", oauth2.AccessTypeOnline)
+		authURL := config.AuthCodeURL("", oauth2.AccessTypeOnline)
 		http.Redirect(w, req, authURL, http.StatusFound)
 	}
 }

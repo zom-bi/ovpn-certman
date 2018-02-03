@@ -52,7 +52,7 @@ func NewSessions(conf *SessionsConfig) *Sessions {
 func (store *Sessions) GetUsername(req *http.Request) string {
 	if store == nil {
 		// if store was not initialized, all requests fail
-		log.Println("Zero pointer when checking session for username")
+		log.Println("Nil pointer when checking session for username")
 		return ""
 	}
 
