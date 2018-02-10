@@ -22,12 +22,11 @@ func LoadTemplates() {
 		"404": newTemplate("layouts/application.gohtml", "errors/404.gohtml"),
 		"500": newTemplate("layouts/application.gohtml", "errors/500.gohtml"),
 
-		"login":           newTemplate("layouts/auth.gohtml", "views/login.gohtml"),
-		"register":        newTemplate("layouts/auth.gohtml", "views/register.gohtml"),
-		"forgot-password": newTemplate("layouts/auth.gohtml", "views/forgot-password.gohtml"),
+		"login": newTemplate("layouts/auth.gohtml", "views/login.gohtml"),
 
-		"debug":     newTemplate("layouts/application.gohtml", "shared/header.gohtml", "shared/footer.gohtml", "views/debug.gohtml"),
-		"cert_list": newTemplate("layouts/application.gohtml", "shared/header.gohtml", "shared/footer.gohtml", "views/cert_list.gohtml"),
+		"client_list": newTemplate("layouts/application.gohtml", "views/client_list.gohtml"),
+
+		"config.ovpn": newTemplate("files/config.ovpn"),
 	}
 	return
 }

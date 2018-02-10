@@ -1,24 +1,21 @@
 package services
 
 type Config struct {
-	DB       *DBConfig
-	Sessions *SessionsConfig
-	Email    *EmailConfig
+	CollectionPath string
+	Sessions       *SessionsConfig
 }
 
 type Provider struct {
-	DB       *DB
-	Sessions *Sessions
-	Email    *Email
+	ClientCollection *ClientCollection
+	Sessions         *Sessions
 }
 
 // NewProvider returns the ServiceProvider
 func NewProvider(conf *Config) *Provider {
 	var provider = &Provider{}
 
-	provider.DB = NewDB(conf.DB)
+	provider.ClientCollection = NewClientCollection(conf.CollectionPath)
 	provider.Sessions = NewSessions(conf.Sessions)
-	provider.Email = NewEmail(conf.Email)
 
 	return provider
 }

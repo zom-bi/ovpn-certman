@@ -11,7 +11,7 @@ import (
 func RequireLogin(sessions *services.Sessions) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		fn := func(w http.ResponseWriter, req *http.Request) {
-			if username := sessions.GetUserEmail(req); username == "" {
+			if username := sessions.GetUsername(req); username == "" {
 				http.Redirect(w, req, "/login", http.StatusFound)
 			}
 

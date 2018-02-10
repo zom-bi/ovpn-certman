@@ -11,29 +11,21 @@ var (
 	ErrNotImplemented = errors.New("Not implemented")
 )
 
-// Model is a base model definition, including helpful fields for dealing with
-// models in a database
-type Model struct {
-	ID        uint `gorm:"primary_key"`
-	CreatedAt time.Time
-	UpdatedAt time.Time
-	DeletedAt *time.Time `sql:"index"`
-}
-
 // Client represent the OpenVPN client configuration
 type Client struct {
-	Model
+	ID         uint
+	CreatedAt  time.Time
 	Name       string
-	User       User
-	UserID     uint
+	User       string
 	Cert       []byte
 	PrivateKey []byte
 }
 
 type ClientProvider interface {
 	CountClients() (uint, error)
-	CreateClient(*User) (*User, error)
-	ListClients(count, offset int) ([]*User, error)
-	GetClientByID(id uint) (*User, error)
+	CreateClient(*Client) (*Client, error)
+	ListClients(count, offset int) ([]*Client, error)
+	ListClientsForUser(user string, count, offset int) ([]*Client, error)
+	GetClientByID(id uint) (*Client, error)
 	DeleteClient(id uint) error
 }
