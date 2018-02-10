@@ -15,61 +15,76 @@ before_script:
   - cd $GOPATH/src/$REPO_NAME
 
 stages:
-    - test
-    - build
-    - release
+  - test
+  - build
+  - release
 
 format:
-    stage: test
-    tags:
-      - docker
-    script:
-      # we use tags="dev" so there is no dependency on the prebuilt assets yet
-      - go get -tags="dev" -v $(go list ./... | grep -v /vendor/) # get missing dependencies
-      - go fmt $(go list ./... | grep -v /vendor/)
-      - go vet $(go list ./... | grep -v /vendor/)
-      - go test -tags="dev" -race $(go list ./... | grep -v /vendor/) -v -coverprofile .testCoverage.txt
-      # Use coverage parsing regex: ^coverage:\s(\d+(?:\.\d+)?%)
+  stage: test
+  tags:
+    - docker
+  script:
+    # we use tags="dev" so there is no dependency on the prebuilt assets yet
+    - go get -tags="dev" -v $(go list ./... | grep -v /vendor/) # get missing dependencies
+    - go fmt $(go list ./... | grep -v /vendor/)
+    - go vet $(go list ./... | grep -v /vendor/)
+    - go test -tags="dev" -race $(go list ./... | grep -v /vendor/) -v -coverprofile .testCoverage.txt
+    # Use coverage parsing regex: ^coverage:\s(\d+(?:\.\d+)?%)
 
 compile:
-    stage: build
-    tags:
-      - docker
-    script:
-      # we use tags="dev" so there is no dependency on the prebuilt assets yet
-      - go get -tags="dev" -v $(go list ./... | grep -v /vendor/) # get missing dependencies
+  stage: build
+  tags:
+    - docker
+  script:
+    # we use tags="dev" so there is no dependency on the prebuilt assets yet
+    - go get -tags="dev" -v $(go list ./... | grep -v /vendor/) # get missing dependencies
 
-      # generate assets
-      - go get github.com/shurcooL/vfsgen/cmd/vfsgendev
-      - go generate git.klink.asia/paul/certman/assets
+    # generate assets
+    - go get github.com/shurcooL/vfsgen/cmd/vfsgendev
+    - go generate git.klink.asia/paul/certman/assets
 
-      # build binaries -- list of supported plattforms is here:
-      # https://stackoverflow.com/a/20728862
-      - GOOS=linux   GOARCH=amd64         go build -o $CI_PROJECT_DIR/certman
-      - GOOS=linux   GOARCH=arm   GOARM=6 go build -o $CI_PROJECT_DIR/certman.arm
-      - GOOS=windows GOARCH=amd64         go build -o $CI_PROJECT_DIR/certman.exe
-    artifacts:
-      expire_in: "8 hrs"
-      paths:
-        - certman
-        - certman.arm
-        - certman.exe
+    # build binaries -- list of supported plattforms is here:
+    # https://stackoverflow.com/a/20728862
+    - GOOS=linux   GOARCH=amd64         go build -tags "netgo" -o $CI_PROJECT_DIR/certman
+    - GOOS=linux   GOARCH=arm   GOARM=6 go build -tags "netgo" -o $CI_PROJECT_DIR/certman.arm
+    - GOOS=windows GOARCH=amd64         go build -tags "netgo" -o $CI_PROJECT_DIR/certman.exe
+  artifacts:
+    expire_in: "8 hrs"
+    paths:
+      - certman
+      - certman.arm
+      - certman.exe
 
 minify:
-    stage: release
-    tags:
-      - docker
-    dependencies:
-      - compile
-    image:
-      name: znly/upx:latest
-      entrypoint: ["/bin/sh", "-c"]
-    script:
-      - upx --best --brute $CI_PROJECT_DIR/certman certman.arm certman.exe
-    artifacts:
-      paths:
-        - certman
-        - certman.arm
-        - certman.exe
-    only:
-      - tags
+  stage: release
+  tags:
+    - docker
+  dependencies:
+    - compile
+  image:
+    name: znly/upx:latest
+    entrypoint: ["/bin/sh", "-c"]
+  script:
+    - upx --best --brute $CI_PROJECT_DIR/certman $CI_PROJECT_DIR/certman.arm $CI_PROJECT_DIR/certman.exe
+  artifacts:
+    paths:
+      - certman
+      - certman.arm
+      - certman.exe
+  only:
+    - tags
+
+build_image:
+  stage: release
+  tags:
+    - dind
+  image: "docker:latest"
+  services:
+    - docker:dind
+  script:
+    - cd $CI_PROJECT_DIR
+    - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
+    - docker build -t $CI_REGISTRY_IMAGE:${CI_COMMIT_REF_NAME#v} .
+    - docker push $CI_REGISTRY_IMAGE:${CI_COMMIT_REF_NAME#v}
+#  only:
+#    - tags

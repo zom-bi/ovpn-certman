@@ -1,24 +1,41 @@
-{{ define "meta" }}
-    <title>Log in</title>
-    <meta name="description" content="Test boilerplate" />
-{{ end}}
+{{ define "meta" }}<title>Log In</title>{{ end }}
 
 {{ define "content" }}
-    <section class="content">
-        <div class="section">
-            <div class="container">
-                <div class="columns">
-                    <div class="column">
-                        <h1>Hello, World!</h1>
-                        <form action="" method="POST">
-                            <input name="username" type="text" value=""/>
-                            <input name="password" type="text" value=""/>
-                            {{ .csrfField }}
-                            <input class="button is-primary" type="submit" value="Log in">
-                        </form>
+    <div class="box is-shadowless">
+        <div class="content has-text-centered" style="padding: 0 40px;">
+            <h1 class="title has-text-dark">Log In</h1>
+            <form action="" method="POST" class="control">
+                <div class="field">
+                    <label for="email" class="label is-hidden">Email Address</label>
+                    <div class="control has-icons-left">
+                        <input class="input is-medium is-shadowless" id="email" name="email" spellcheck="false" label="false" type="" placeholder="Email Address" value="" autofocus />
+                        <span class="icon is-medium is-left">
+                            <i class="fas fa-at"></i>
+                        </span>
                     </div>
                 </div>
-            </div>
+                <div class="field">
+                    <label for="password" class="label is-hidden">Password</label>
+                    <div class="control has-icons-left">
+                        <input class="input is-medium is-shadowless" id="password" name="password" type="password" placeholder="Password" value=""/>
+                        <span class="icon is-medium is-left">
+                            <i class="fas fa-key"></i>
+                        </span>
+                    </div>
+                </div>
+                {{ .csrfField }}
+                <div class="field is-grouped-right">
+                    <input class="button is-success is-fullwidth is-medium" type="submit" value="Log In">
+                </div>
+                <div class="field has-text-centered">
+                    <p><a href="/forgot-password">Forgot Password?</a></p>
+                </div>
+            </form>
         </div>
-    </section>
-{{ end}}
+    </div>
+    <div class="field">
+        <p class="has-text-white has-text-centered">
+            Don't have an account? <a class="has-text-weight-bold" href="/register">Sign Up</a>
+        </p>
+    </div>
+{{ end }}

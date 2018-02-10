@@ -7,12 +7,15 @@ import (
 	"log"
 	"net/http"
 
+	"git.klink.asia/paul/certman/services"
+
 	"github.com/gorilla/csrf"
 )
 
 type View struct {
-	Vars    map[string]interface{}
-	Request *http.Request
+	Vars         map[string]interface{}
+	Request      *http.Request
+	SessionStore *services.Sessions
 }
 
 func New(req *http.Request) *View {
@@ -25,6 +28,25 @@ func New(req *http.Request) *View {
 				"Path": req.URL.Path,
 				"Env":  "develop",
 			},
+			"flashes":  []services.Flash{},
+			"username": "",
+		},
+	}
+}
+
+func NewWithSession(req *http.Request, sessionStore *services.Sessions) *View {
+	return &View{
+		Request:      req,
+		SessionStore: sessionStore,
+		Vars: map[string]interface{}{
+			"CSRF_TOKEN": csrf.Token(req),
+			"csrfField":  csrf.TemplateField(req),
+			"Meta": map[string]interface{}{
+				"Path": req.URL.Path,
+				"Env":  "develop",
+			},
+			"flashes":  []services.Flash{},
+			"username": sessionStore.GetUsername(req),
 		},
 	}
 }
@@ -39,6 +61,11 @@ func (view View) Render(w http.ResponseWriter, name string) {
 		return
 	}
 
+	if view.SessionStore != nil {
+		// add flashes to template
+		view.Vars["flashes"] = view.SessionStore.Flashes(w, view.Request)
+	}
+
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
 	t.Execute(w, view.Vars)
@@ -49,12 +76,12 @@ func (view View) RenderError(w http.ResponseWriter, status int) {
 	var name string
 
 	switch status {
-	case http.StatusNotFound:
-		name = "404"
 	case http.StatusUnauthorized:
 		name = "401"
 	case http.StatusForbidden:
 		name = "403"
+	case http.StatusNotFound:
+		name = "404"
 	default:
 		name = "500"
 	}

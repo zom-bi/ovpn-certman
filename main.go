@@ -1,36 +1,53 @@
 package main
 
 import (
+	"errors"
 	"log"
 	"net/http"
+	"os"
+	"time"
 
-	"github.com/jinzhu/gorm"
+	"git.klink.asia/paul/certman/services"
 
-	"git.klink.asia/paul/certman/models"
 	"git.klink.asia/paul/certman/router"
 	"git.klink.asia/paul/certman/views"
-
-	// import sqlite3 driver once
-	_ "github.com/mattn/go-sqlite3"
 )
 
 func main() {
-
-	// Connect to the database
-	db, err := gorm.Open("sqlite3", "db.sqlite3")
-	if err != nil {
-		log.Fatalf("Could not open database: %s", err.Error())
+	log.Println("Initializing certman")
+	if err := checkCAFilesExist(); err != nil {
+		log.Fatalf("Could not read CA files: %s", err)
 	}
-	defer db.Close()
 
-	// Migrate
-	db.AutoMigrate(models.User{}, models.ClientConf{})
+	c := services.Config{
+		CollectionPath: "./clients.json",
+		Sessions: &services.SessionsConfig{
+			SessionName: "_session",
+			CookieKey:   os.Getenv("APP_KEY"),
+			HttpOnly:    true,
+			Lifetime:    24 * time.Hour,
+		},
+	}
+
+	log.Println(".. services")
+	serviceProvider := services.NewProvider(&c)
 
 	// load and parse template files
+	log.Println(".. templates")
 	views.LoadTemplates()
 
-	mux := router.HandleRoutes(db)
+	mux := router.HandleRoutes(serviceProvider)
 
-	err = http.ListenAndServe(":8000", mux)
+	log.Println(".. server")
+	err := http.ListenAndServe(os.Getenv("APP_LISTEN"), mux)
 	log.Fatalf(err.Error())
+}
+
+func checkCAFilesExist() error {
+	for _, filename := range []string{"ca.crt", "ca.key"} {
+		if _, err := os.Stat(filename); os.IsNotExist(err) {
+			return errors.New(filename + " not readable")
+		}
+	}
+	return nil
 }

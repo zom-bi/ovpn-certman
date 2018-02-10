@@ -1,3 +1,7 @@
 *_vfsdata.go
 certman
 db.sqlite3
+*.crt
+*.key
+clients.json
+.env
