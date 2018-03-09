@@ -1,6 +1,8 @@
 # Certman
 Certman is a simple certificate manager web service for OpenVPN.
 
+**For usage tips, please consult [`usage.md`](usage.md)
+
 ## Installation
 ### Binary
 There are prebuilt binary files for this application. They are statically
