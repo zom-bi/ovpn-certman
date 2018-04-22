@@ -20,6 +20,7 @@ services:
         volumes:
             - ./ca.crt:/ca.crt:ro
             - ./ca.key:/ca.key:ro
+            - ./ta.key:/ta.key:ro
             - ./clients.json:/clients.json:rw
         labels:
             - "traefik.enable=true"
