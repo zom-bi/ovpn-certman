@@ -1,4 +1,4 @@
-FROM golang:1.9
+FROM golang:1.10
 
 WORKDIR /go/src/git.klink.asia/paul/certman
 ADD . .
@@ -10,7 +10,6 @@ RUN \
 
 FROM scratch
 ENV \
-    APP_KEY="" \
     OAUTH2_CLIENT_ID="" \
     OAUTH2_CLIENT_SECRET="" \
     OAUTH2_AUTH_URL="https://gitlab.example.com/oauth/authorize" \
