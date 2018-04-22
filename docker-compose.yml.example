@@ -1,0 +1,31 @@
+version: '2'
+
+networks:
+  web:
+    external:
+      name: reverseproxy_web
+
+services:
+    web:
+        image: docker.klink.asia/paul/certman:latest
+        environment:
+            - "OAUTH2_CLIENT_ID=setme"
+            - "OAUTH2_CLIENT_SECRET=setme"
+            - "OAUTH2_TOKEN_URL=https://git.example.com/oauth/token"
+            - "OAUTH2_AUTH_URL=https://git.example.com/oauth/authorize"
+            - "OAUTH2_REDIRECT_URL=https://vpn.example.com/login/oauth2/redirect"
+            - "USER_ENDPOINT=https://git.example.com/api/v4/user"
+            - "APP_KEY=setme_32chars"
+            - "APP_LISTEN=:8000"
+        volumes:
+            - ./ca.crt:/ca.crt:ro
+            - ./ca.key:/ca.key:ro
+            - ./ta.key:/ta.key:ro
+            - ./clients.json:/clients.json:rw
+        labels:
+            - "traefik.enable=true"
+            - "traefik.frontend.rule=Host: vpn.example.com"
+            - "traefik.docker.network=reverseproxy_web"
+            - "traefik.port=8000"
+        networks:
+            - web

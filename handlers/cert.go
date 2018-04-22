@@ -13,6 +13,7 @@ import (
 	"log"
 	"math/big"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -170,9 +171,31 @@ func DownloadCertHandler(p *services.Provider) http.HandlerFunc {
 		pem.Encode(cbuf, &pem.Block{Type: "CERTIFICATE", Bytes: client.Cert})
 		pem.Encode(kbuf, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: client.PrivateKey})
 
+		ca, err := ioutil.ReadFile("ca.crt")
+		if err != nil {
+			log.Printf("Error loading ca file: %s", err)
+			v.RenderError(w, http.StatusInternalServerError)
+			return
+		}
+
+		ta, err := ioutil.ReadFile("ta.key")
+		if err != nil {
+			log.Printf("Error loading ta file: %s", err)
+			v.RenderError(w, http.StatusInternalServerError)
+			return
+		}
+
 		vars := map[string]string{
-			"Cert": cbuf.String(),
-			"Key":  kbuf.String(),
+			"CA":    string(ca),
+			"TA":    string(ta),
+			"Cert":  cbuf.String(),
+			"Key":   kbuf.String(),
+			"User":  username,
+			"Name":  name,
+			"Dev":   os.Getenv("VPN_DEV"),
+			"Host":  os.Getenv("VPN_HOST"),
+			"Port":  os.Getenv("VPN_PORT"),
+			"Proto": os.Getenv("VPN_PROTO"),
 		}
 
 		t, err := views.GetTemplate("config.ovpn")
