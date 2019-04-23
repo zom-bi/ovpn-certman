@@ -15,13 +15,13 @@ Simply download them from the "artifacts" section of this project.
 A prebuilt docker image (10MB) is available:
 
 ```
-docker pull docker.klink.asia/paul/certman
+docker pull zombi/certman
 ```
 ### From Source-Docker
 You can easily build your own docker image from source
 
 ```
-docker build -t docker.klink.asia/paul/certman .
+docker build -t zombi/certman .
 ```
 
 ## Configuration
