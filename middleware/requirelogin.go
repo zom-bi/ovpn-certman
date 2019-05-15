@@ -13,6 +13,7 @@ func RequireLogin(sessions *services.Sessions) func(http.Handler) http.Handler {
 		fn := func(w http.ResponseWriter, req *http.Request) {
 			if username := sessions.GetUsername(req); username == "" {
 				http.Redirect(w, req, "/login", http.StatusFound)
+				return
 			}
 
 			next.ServeHTTP(w, req)

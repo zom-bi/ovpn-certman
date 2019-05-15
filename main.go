@@ -22,10 +22,8 @@ func main() {
 	c := services.Config{
 		CollectionPath: "./clients.json",
 		Sessions: &services.SessionsConfig{
-			SessionName: "_session",
-			CookieKey:   os.Getenv("APP_KEY"),
-			HttpOnly:    true,
-			Lifetime:    24 * time.Hour,
+			HTTPOnly: true,
+			Lifetime: 24 * time.Hour,
 		},
 	}
 

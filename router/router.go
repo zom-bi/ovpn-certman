@@ -5,25 +5,24 @@ import (
 	"os"
 	"strings"
 
-	"github.com/zom-bi/ovpn-certman/services"
+	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/middleware"
+	"github.com/gorilla/csrf"
+	"github.com/gorilla/securecookie"
 	"golang.org/x/oauth2"
 
 	"github.com/zom-bi/ovpn-certman/assets"
 	"github.com/zom-bi/ovpn-certman/handlers"
-	"github.com/zom-bi/ovpn-certman/views"
-	"github.com/go-chi/chi"
-	"github.com/go-chi/chi/middleware"
-	"github.com/gorilla/csrf"
-
 	mw "github.com/zom-bi/ovpn-certman/middleware"
+	"github.com/zom-bi/ovpn-certman/services"
+	"github.com/zom-bi/ovpn-certman/views"
 )
 
 var (
 	// TODO: make this configurable
 	csrfCookieName = "csrf"
 	csrfFieldName  = "csrf_token"
-	csrfKey        = []byte("7Oj4DllZ9lTsxJnisTuWiiQBGQIzi6gX")
-	cookieKey      = []byte("osx70sMD8HZG2ouUl8uKI4wcMugiJ2WH")
+	csrfKey        = securecookie.GenerateRandomKey(32)
 )
 
 func HandleRoutes(provider *services.Provider) http.Handler {
@@ -34,7 +33,7 @@ func HandleRoutes(provider *services.Provider) http.Handler {
 	mux.Use(middleware.RealIP)             // use proxy headers
 	mux.Use(middleware.RedirectSlashes)    // redirect trailing slashes
 	mux.Use(mw.Recoverer)                  // recover on panic
-	mux.Use(provider.Sessions.Manager.Use) // use session storage
+	mux.Use(provider.Sessions.LoadAndSave) // use session storage
 
 	// TODO: move this code away from here
 	oauth2Config := &oauth2.Config{
