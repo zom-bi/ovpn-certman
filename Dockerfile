@@ -19,8 +19,7 @@ ENV \
     VPN_DEV="tun" \
     VPN_HOST="vpn.example.com" \
     VPN_PORT="1194" \
-    VPN_PROTO="udp" \
-    APP_KEY=""
+    VPN_PROTO="udp"
 COPY --from=0 /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
-COPY --from=0 /go/src/github.com/zom-bi/ovpn-certman/certman /
+COPY --from=0 /go/src/github.com/zom-bi/ovpn-certman/ovpn-certman /certman
 ENTRYPOINT ["/certman"]
