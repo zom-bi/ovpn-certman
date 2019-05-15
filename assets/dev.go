@@ -12,8 +12,8 @@ import (
 
 // Assets contains project assets.
 var Assets = union.New(map[string]http.FileSystem{
-	"/static":    http.Dir(importPathToDir("git.klink.asia/paul/certman/assets/static")),
-	"/templates": http.Dir(importPathToDir("git.klink.asia/paul/certman/assets/templates")),
+	"/static":    http.Dir(importPathToDir("github.com/zom-bi/ovpn-certman/assets/static")),
+	"/templates": http.Dir(importPathToDir("github.com/zom-bi/ovpn-certman/assets/templates")),
 })
 
 // importPathToDir is a helper function that resolves the absolute path of

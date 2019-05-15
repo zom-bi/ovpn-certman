@@ -8,7 +8,7 @@ import (
 	"os"
 	"sync"
 
-	"git.klink.asia/paul/certman/models"
+	"github.com/zom-bi/ovpn-certman/models"
 )
 
 var (

@@ -1,11 +1,11 @@
 FROM golang:1.12
 
-WORKDIR /go/src/git.klink.asia/paul/certman
+WORKDIR /go/src/github.com/zom-bi/ovpn-certman
 ADD . .
 RUN \
-    go get -tags="dev" -v git.klink.asia/paul/certman && \
+    go get -tags="dev" -v github.com/zom-bi/ovpn-certman && \
     go get github.com/shurcooL/vfsgen/cmd/vfsgendev && \
-    go generate git.klink.asia/paul/certman/assets && \
+    go generate github.com/zom-bi/ovpn-certman/assets && \
     go build -tags="netgo"
 
 FROM scratch
@@ -22,5 +22,5 @@ ENV \
     VPN_PROTO="udp" \
     APP_KEY=""
 COPY --from=0 /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
-COPY --from=0 /go/src/git.klink.asia/paul/certman/certman /
+COPY --from=0 /go/src/github.com/zom-bi/ovpn-certman/certman /
 ENTRYPOINT ["/certman"]

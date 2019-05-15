@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"runtime/debug"
 
-	"git.klink.asia/paul/certman/handlers"
+	"github.com/zom-bi/ovpn-certman/handlers"
 )
 
 // Recoverer Listens for panic() calls and logs the stacktrace.

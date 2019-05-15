@@ -5,17 +5,17 @@ import (
 	"os"
 	"strings"
 
-	"git.klink.asia/paul/certman/services"
+	"github.com/zom-bi/ovpn-certman/services"
 	"golang.org/x/oauth2"
 
-	"git.klink.asia/paul/certman/assets"
-	"git.klink.asia/paul/certman/handlers"
-	"git.klink.asia/paul/certman/views"
+	"github.com/zom-bi/ovpn-certman/assets"
+	"github.com/zom-bi/ovpn-certman/handlers"
+	"github.com/zom-bi/ovpn-certman/views"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/gorilla/csrf"
 
-	mw "git.klink.asia/paul/certman/middleware"
+	mw "github.com/zom-bi/ovpn-certman/middleware"
 )
 
 var (

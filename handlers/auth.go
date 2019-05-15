@@ -6,10 +6,10 @@ import (
 	"net/http"
 	"os"
 
-	"git.klink.asia/paul/certman/views"
+	"github.com/zom-bi/ovpn-certman/views"
 	"golang.org/x/oauth2"
 
-	"git.klink.asia/paul/certman/services"
+	"github.com/zom-bi/ovpn-certman/services"
 )
 
 func OAuth2Endpoint(p *services.Provider, config *oauth2.Config) http.HandlerFunc {

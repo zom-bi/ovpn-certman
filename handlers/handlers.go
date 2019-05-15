@@ -3,7 +3,7 @@ package handlers
 import (
 	"net/http"
 
-	"git.klink.asia/paul/certman/views"
+	"github.com/zom-bi/ovpn-certman/views"
 )
 
 func NotFoundHandler(w http.ResponseWriter, req *http.Request) {

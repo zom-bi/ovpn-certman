@@ -3,7 +3,7 @@ package middleware
 import (
 	"net/http"
 
-	"git.klink.asia/paul/certman/services"
+	"github.com/zom-bi/ovpn-certman/services"
 )
 
 // RequireLogin is a middleware that checks for a username in the active

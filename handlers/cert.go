@@ -17,11 +17,11 @@ import (
 	"strings"
 	"time"
 
-	"git.klink.asia/paul/certman/models"
-	"git.klink.asia/paul/certman/services"
+	"github.com/zom-bi/ovpn-certman/models"
+	"github.com/zom-bi/ovpn-certman/services"
 	"github.com/go-chi/chi"
 
-	"git.klink.asia/paul/certman/views"
+	"github.com/zom-bi/ovpn-certman/views"
 )
 
 func ListClientsHandler(p *services.Provider) http.HandlerFunc {

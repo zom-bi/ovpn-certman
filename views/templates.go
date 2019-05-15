@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"path/filepath"
 
-	"git.klink.asia/paul/certman/assets"
+	"github.com/zom-bi/ovpn-certman/assets"
 )
 
 // map of all parsed templates, by template name

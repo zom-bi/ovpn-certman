@@ -7,7 +7,7 @@ import (
 	"log"
 	"net/http"
 
-	"git.klink.asia/paul/certman/services"
+	"github.com/zom-bi/ovpn-certman/services"
 
 	"github.com/gorilla/csrf"
 )

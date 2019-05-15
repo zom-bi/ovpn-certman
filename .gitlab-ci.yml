@@ -1,7 +1,7 @@
 image: golang:latest
 
 variables:
-  REPO_NAME: git.klink.asia/paul/certman
+  REPO_NAME: github.com/zom-bi/ovpn-certman
 
 # The problem is that to be able to use go get, one needs to put
 # the repository in the $GOPATH. So for example if your gitlab domain
@@ -41,7 +41,7 @@ compile:
 
     # generate assets
     - go get github.com/shurcooL/vfsgen/cmd/vfsgendev
-    - go generate git.klink.asia/paul/certman/assets
+    - go generate github.com/zom-bi/ovpn-certman/assets
 
     # build binaries -- list of supported plattforms is here:
     # https://stackoverflow.com/a/20728862

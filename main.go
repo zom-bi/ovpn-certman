@@ -7,10 +7,10 @@ import (
 	"os"
 	"time"
 
-	"git.klink.asia/paul/certman/services"
+	"github.com/zom-bi/ovpn-certman/services"
 
-	"git.klink.asia/paul/certman/router"
-	"git.klink.asia/paul/certman/views"
+	"github.com/zom-bi/ovpn-certman/router"
+	"github.com/zom-bi/ovpn-certman/views"
 )
 
 func main() {
